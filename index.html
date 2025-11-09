@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Central Bank Machine Simulator - Complete Banking Transfer System</title>
+<style>
+  :root{
+    --bg:#0c0f14; --card:#121722; --ink:#e7ecf3; --muted:#9fb1c7;
+    --pri:#4aa3ff; --pri-2:#1f7ae6; --ok:#2ecc71; --warn:#f1c40f; --err:#ff5c5c;
+    --accent:#8a63ff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 800px at 80% -10%, #1a2233 0%, #0c0f14 55%);
+    color:var(--ink); font:14px/1.55 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  .wrap{max-width:1400px; margin:32px auto; padding:0 20px}
+  header{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px}
+  h1{font-size:20px; margin:0; letter-spacing:.3px}
+  .tag{padding:3px 8px; border-radius:999px; background:#1a2130; color:var(--muted); border:1px solid #273146}
+  .locked{
+    max-width:520px; margin:90px auto; background:var(--card); border:1px solid #273146; border-radius:16px; padding:28px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  .locked h2{margin:0 0 10px 0}
+  .row{display:flex; gap:16px; flex-wrap:wrap}
+  .col{flex:1 1 360px; min-width:320px}
+  .card{
+    background:linear-gradient(180deg, #141b29 0%, #111623 100%);
+    border:1px solid #263149; border-radius:16px; padding:18px; margin:10px 0 20px 0;
+    box-shadow:0 12px 26px rgba(10,14,25,.35);
+  }
+  .card h3{margin:0 0 12px 0; font-size:16px; letter-spacing:.2px}
+  label{display:block; font-size:12px; color:var(--muted); margin:12px 0 6px 0}
+  input,select,textarea{
+    width:100%; background:#0e1420; color:var(--ink);
+    border:1px solid #2a3650; border-radius:10px; padding:10px 12px; outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--pri)}
+  textarea{min-height:110px; resize:vertical; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .btn{
+    appearance:none; border:none; background:linear-gradient(180deg,var(--pri) 0%,var(--pri-2) 100%);
+    color:#fff; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600; letter-spacing:.2px;
+  }
+  .btn.secondary{background:#1b2436; color:var(--ink); border:1px solid #2b3853}
+  .btn.ghost{background:transparent; color:var(--ink); border:1px solid #2b3853}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+  .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid #293654; background:#11182a}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  .hl{color:#e6f2ff}
+  .footnote{color:var(--muted); font-size:12px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .divider{height:1px; background:#23304a; margin:14px 0}
+  .flex{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .right{margin-left:auto}
+  .kbd{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:#0e1420; border:1px solid #2a3650; padding:2px 6px; border-radius:6px}
+  .stage{display:flex; gap:10px; flex-wrap:wrap; margin:10px 0}
+  .stage .pill{opacity:.95}
+  .muted{color:var(--muted)}
+  .tabs{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap}
+  .tab{background:#1a2436; border:1px solid #2b3853; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px}
+  .tab.active{background:var(--pri); color:#fff}
+  .transaction-types{display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px; margin-top:12px}
+  .type-card{background:#0e1420; border:1px solid #2a3650; border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s}
+  .type-card:hover{background:#151d2d; border-color:var(--pri)}
+  .type-card.selected{background:#1a2a4a; border-color:var(--pri)}
+  .type-card h4{margin:0 0 6px 0; font-size:14px}
+  .type-card p{margin:0; font-size:12px; color:var(--muted)}
+  .dashboard{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:16px; margin-bottom:20px}
+  .stat-card{background:var(--card); border:1px solid #263149; border-radius:12px; padding:16px}
+  .stat-card h4{margin:0 0 8px 0; font-size:13px; color:var(--muted)}
+  .stat-card .value{font-size:24px; font-weight:bold}
+  .stat-card .ok{color:var(--ok)}
+  .stat-card .warn{color:var(--warn)}
+  .stat-card .err{color:var(--err)}
+  .transaction-log{max-height:300px; overflow-y:auto; border:1px solid #263149; border-radius:10px; padding:12px}
+  .log-entry{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #1e2a3d}
+  .log-entry:last-child{border-bottom:none}
+  .log-type{font-weight:bold}
+  .log-amount{color:var(--ok)}
+  .log-time{color:var(--muted); font-size:12px}
+  .swift-preview{background:#0a0f18; padding:12px; border-radius:8px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; white-space:pre-wrap; font-size:12px; margin-top:12px}
+  .field-group{margin-bottom:16px}
+  .field-group h4{margin:0 0 8px 0; font-size:14px; color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app" style="display:none">
+  <header>
+    <h1>Central Bank Machine Simulator <span class="tag">Complete Banking Transfer System</span></h1>
+    <div class="flex">
+      <span class="pill"><span style="width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block"></span> System Ready</span>
+      <button class="btn ghost" id="btnExportBundle">Export Bundle (.txt)</button>
+    </div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <div class="dashboard">
+    <div class="stat-card">
+      <h4>Total Transactions</h4>
+      <div class="value" id="totalTransactions">0</div>
+    </div>
+    <div class="stat-card">
+      <h4>Successful</h4>
+      <div class="value ok" id="successTransactions">0</div>
+    </div>
+    <div class="stat-card">
+      <h4>Pending</h4>
+      <div class="value warn" id="pendingTransactions">0</div>
+    </div>
+    <div class="stat-card">
+      <h4>Failed</h4>
+      <div class="value err" id="failedTransactions">0</div>
+    </div>
+  </div>
+
+  <!-- TRANSFER TYPE SELECTOR -->
+  <div class="card">
+    <div class="flex">
+      <h3 style="margin-right:auto">Supported Transfer Types</h3>
+      <div class="muted">Central Bank Machine supports all banking transfer formats</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="swift">SWIFT Messages</div>
+      <div class="tab" data-tab="local">Local Transfers</div>
+      <div class="tab" data-tab="international">International</div>
+      <div class="tab" data-tab="internal">Internal Banking</div>
+    </div>
+    <div class="transaction-types">
+      <div class="type-card selected" data-type="MT103">
+        <h4>SWIFT MT103</h4>
+        <p>Single Customer Credit Transfer</p>
+      </div>
+      <div class="type-card" data-type="MT202">
+        <h4>SWIFT MT202</h4>
+        <p>General Financial Institution Transfer</p>
+      </div>
+      <div class="type-card" data-type="MT101">
+        <h4>SWIFT MT101</h4>
+        <p>Request for Transfer</p>
+      </div>
+      <div class="type-card" data-type="SEPA">
+        <h4>SEPA Credit</h4>
+        <p>Single Euro Payments Area</p>
+      </div>
+      <div class="type-card" data-type="FEDWIRE">
+        <h4>Fedwire</h4>
+        <p>US Domestic Transfers</p>
+      </div>
+      <div class="type-card" data-type="CHAPS">
+        <h4>CHAPS</h4>
+        <p>UK Same-Day Transfer</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- LEFT: INPUTS -->
+    <div class="col">
+      <div class="card">
+        <h3>Access Control</h3>
+        <label>Session Owner</label>
+        <input id="owner" placeholder="e.g., Yaseen" value="Yaseen"/>
+        <label>Seal Note</label>
+        <input id="seal" placeholder="Short session note" />
+        <div class="divider"></div>
+        <button class="btn" id="btnLock">Re-Lock Console</button>
+        <span class="footnote">Re-lock will hide the console and require passphrase again.</span>
+      </div>
+
+      <div class="card">
+        <h3>Transfer Details</h3>
+        <div class="grid-2">
+          <div>
+            <label>Amount</label>
+            <input id="amountVal" type="number" step="0.01" value="10000.00">
+          </div>
+          <div>
+            <label>Currency</label>
+            <select id="amountCcy">
+              <option value="EUR" selected>EUR</option>
+              <option value="USD">USD</option>
+              <option value="GBP">GBP</option>
+              <option value="CHF">CHF</option>
+              <option value="JPY">JPY</option>
+            </select>
+          </div>
+        </div>
+        <label>Value Date</label>
+        <input id="valueDate" type="date">
+        <label>Transaction Reference</label>
+        <input id="transactionRef" value="CB-TX-2023-001">
+      </div>
+
+      <div class="card">
+        <h3>Sender Information</h3>
+        <div class="grid-2">
+          <div>
+            <label>Sender Name</label>
+            <input id="senderName" value="Global Corp Inc.">
+          </div>
+          <div>
+            <label>Sender Account</label>
+            <input id="senderAccount" value="US12345678901234">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label>Sender BIC</label>
+            <input id="senderBIC" value="GLOBUS33XXX">
+          </div>
+          <div>
+            <label>Sender Bank</label>
+            <input id="senderBank" value="Global Bank">
+          </div>
+        </div>
+        <label>Sender Address</label>
+        <input id="senderAddress" value="123 Business Ave, New York, NY">
+      </div>
+
+      <div class="card">
+        <h3>Beneficiary Information</h3>
+        <div class="grid-2">
+          <div>
+            <label>Beneficiary Name</label>
+            <input id="beneficiaryName" value="European Imports Ltd.">
+          </div>
+          <div>
+            <label>Beneficiary Account</label>
+            <input id="beneficiaryAccount" value="EU98765432109876">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label>Beneficiary BIC</label>
+            <input id="beneficiaryBIC" value="EUROPDEFFXXX">
+          </div>
+          <div>
+            <label>Beneficiary Bank</label>
+            <input id="beneficiaryBank" value="European Commercial Bank">
+          </div>
+        </div>
+        <label>Beneficiary Address</label>
+        <input id="beneficiaryAddress" value="456 Trade Street, Frankfurt">
+        <label>Payment Details</label>
+        <textarea id="paymentDetails">Invoice payment for Q4 2023</textarea>
+      </div>
+    </div>
+
+    <!-- RIGHT: ACTIONS/OUTPUTS -->
+    <div class="col">
+      <div class="card">
+        <h3>Step 1 — Generate Message Format</h3>
+        <div class="flex">
+          <button class="btn" id="btnBuildMessage">Generate Message</button>
+          <button class="btn secondary" id="btnCopyMessage">Copy Message</button>
+          <button class="btn ghost" id="btnDownloadMessage">Download Message</button>
+          <span class="right pill">Output → <span class="hl" id="outputFilename">mt103_message.txt</span></span>
+        </div>
+        <label>Message Preview</label>
+        <textarea id="messageOutput" readonly></textarea>
+        <div id="swiftPreview" class="swift-preview" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <h3>Step 2 — Central Bank Processing</h3>
+        <div class="flex">
+          <button class="btn" id="btnProcessTransfer">Process Transfer</button>
+          <button class="btn secondary" id="btnSimulateSettlement">Simulate Settlement</button>
+        </div>
+        <label>Processing Log</label>
+        <textarea id="processingLog" class="mono" readonly></textarea>
+        <div class="footnote">Simulates Central Bank validation, compliance checks, and settlement.</div>
+      </div>
+
+      <div class="card">
+        <h3>Step 3 — Generate API Integration</h3>
+        <div class="flex">
+          <button class="btn" id="btnBuildAPI">Generate API Code</button>
+          <button class="btn secondary" id="btnCopyAPI">Copy API Code</button>
+        </div>
+        <label>API Integration Code</label>
+        <textarea id="apiCode" class="mono" readonly></textarea>
+        <div class="footnote">Sample integration code for banking systems.</div>
+      </div>
+
+      <div class="card">
+        <h3>Live Transaction Monitor</h3>
+        <div class="transaction-log" id="transactionLog">
+          <div class="log-entry">
+            <div><span class="log-type">System</span> <span class="log-details">Central Bank Machine initialized</span></div>
+            <div class="log-time">Just now</div>
+          </div>
+        </div>
+        <div class="flex" style="margin-top:12px">
+          <button class="btn secondary" id="btnClearLog">Clear Log</button>
+          <span class="footnote">Live simulation of transaction processing</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    <b>Important:</b> This is a simulation environment for demonstration purposes. Real banking transactions require proper authorization, security protocols, and regulatory compliance.
+  </div>
+</div>
+
+<!-- LOCK SCREEN -->
+<div id="lock" class="locked">
+  <h2>Enter Passphrase</h2>
+  <p class="muted" style="margin:0 0 12px 0">This console is locked. Only authorized personnel can unlock.</p>
+  <label>Passphrase</label>
+  <input id="pass" type="password" placeholder="••••••••" />
+  <div class="flex" style="margin-top:12px">
+    <button class="btn" id="btnUnlock">Unlock</button>
+    <span class="footnote">Default passphrase: centralbank123</span>
+  </div>
+</div>
+
+<script>
+  // --- Central Bank Machine Simulator ---
+  const SECRET_KEY = "centralbank123";
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => document.querySelectorAll(sel);
+
+  // Statistics
+  let stats = {
+    total: 0,
+    success: 0,
+    pending: 0,
+    failed: 0
+  };
+
+  // Current transfer type
+  let currentTransferType = "MT103";
+
+  // Show/hide app
+  const showApp = () => { $("#lock").style.display="none"; $("#app").style.display="block"; };
+  const hideApp = () => { $("#app").style.display="none"; $("#lock").style.display="block"; };
+
+  // Initialize date field
+  $("#valueDate").valueAsDate = new Date();
+
+  // Tab selection
+  $$(".tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      $$(".tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+    });
+  });
+
+  // Transfer type selection
+  $$(".type-card").forEach(card => {
+    card.addEventListener("click", () => {
+      $$(".type-card").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      currentTransferType = card.dataset.type;
+      $("#outputFilename").textContent = `${currentTransferType.toLowerCase()}_message.txt`;
+      log(`Selected transfer type: ${currentTransferType}`);
+    });
+  });
+
+  // Unlock mechanism
+  $("#btnUnlock").onclick = () => {
+    const v = $("#pass").value.trim();
+    if(v === SECRET_KEY){ 
+      showApp(); 
+      log("Central Bank Machine unlocked. System ready for transaction processing.");
+    }
+    else alert("Incorrect passphrase. Access denied.");
+  };
+  $("#btnLock").onclick = () => { 
+    hideApp(); 
+    log("System locked. All sensitive data secured.");
+  };
+
+  // --- helpers ---
+  function log(msg){ 
+    const logArea = $("#transactionLog");
+    const entry = document.createElement("div");
+    entry.className = "log-entry";
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString();
+    
+    entry.innerHTML = `
+      <div><span class="log-type">${currentTransferType}</span> <span class="log-details">${msg}</span></div>
+      <div class="log-time">${timeStr}</div>
+    `;
+    
+    logArea.appendChild(entry);
+    logArea.scrollTop = logArea.scrollHeight;
+    
+    // Update processing log
+    const processingLog = $("#processingLog");
+    processingLog.value += `[${now.toISOString()}] ${msg}\n`;
+    processingLog.scrollTop = processingLog.scrollHeight;
+  }
+
+  function copy(txt){ 
+    navigator.clipboard.writeText(txt).then(() => log("Copied to clipboard.")); 
+  }
+
+  function downloadText(filename, text){
+    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); 
+    a.href = url; 
+    a.download = filename; 
+    a.click();
+    URL.revokeObjectURL(url);
+    log(`Downloaded: ${filename}`);
+  }
+
+  function updateStats() {
+    $("#totalTransactions").textContent = stats.total;
+    $("#successTransactions").textContent = stats.success;
+    $("#pendingTransactions").textContent = stats.pending;
+    $("#failedTransactions").textContent = stats.failed;
+  }
+
+  // --- Generate Message ---
+  $("#btnBuildMessage").onclick = () => {
+    let message = "";
+    let swiftPreview = "";
+    
+    switch(currentTransferType) {
+      case "MT103":
+        message = generateMT103();
+        swiftPreview = formatSwiftMessage(message);
+        break;
+      case "MT202":
+        message = generateMT202();
+        swiftPreview = formatSwiftMessage(message);
+        break;
+      case "MT101":
+        message = generateMT101();
+        swiftPreview = formatSwiftMessage(message);
+        break;
+      case "SEPA":
+        message = generateSEPA();
+        break;
+      case "FEDWIRE":
+        message = generateFedwire();
+        break;
+      case "CHAPS":
+        message = generateCHAPS();
+        break;
+    }
+    
+    $("#messageOutput").value = message;
+    
+    if (currentTransferType.startsWith("MT")) {
+      $("#swiftPreview").style.display = "block";
+      $("#swiftPreview").textContent = swiftPreview;
+    } else {
+      $("#swiftPreview").style.display = "none";
+    }
+    
+    log(`Generated ${currentTransferType} message format`);
+  };
+
+  // Message generators
+  function generateMT103() {
+    return `{1:F01GLOBUS33XXX0000000000}
+{2:O1030000000000EUROPDEFFXXX0000000000000000}
+{3:{113:SEPA}{108:CB20230001}{111:001}}
+{4:
+:20:CB-TX-${Math.floor(Math.random()*1000000).toString().padStart(6, '0')}
+:23B:CRED
+:32A:${$("#valueDate").value.replace(/-/g, '')}${$("#amountCcy").value}${parseFloat($("#amountVal").value).toFixed(2)}
+:50K:${$("#senderName").value}
+:52A:${$("#senderBIC").value}
+:53A:${$("#senderBIC").value}
+:57A:${$("#beneficiaryBIC").value}
+:59:${$("#beneficiaryAccount").value}
+:70:${$("#paymentDetails").value}
+:71A:SHA
+-}`;
+  }
+
+  function generateMT202() {
+    return `{1:F01GLOBUS33XXX0000000000}
+{2:O2020000000000EUROPDEFFXXX0000000000000000}
+{3:{113:SEPA}{108:CB20230002}{111:001}}
+{4:
+:20:CB-TX-${Math.floor(Math.random()*1000000).toString().padStart(6, '0')}
+:21:NONREF
+:32A:${$("#valueDate").value.replace(/-/g, '')}${$("#amountCcy").value}${parseFloat($("#amountVal").value).toFixed(2)}
+:52A:${$("#senderBIC").value}
+:53A:${$("#senderBIC").value}
+:56A:INTERBICXXX
+:57A:${$("#beneficiaryBIC").value}
+:58A:${$("#beneficiaryBIC").value}
+:72:/INS/${$("#beneficiaryBIC").value}
+-}`;
+  }
+
+  function generateMT101() {
+    return `{1:F01GLOBUS33XXX0000000000}
+{2:O1010000000000EUROPDEFFXXX0000000000000000}
+{3:{113:SEPA}{108:CB20230003}{111:001}}
+{4:
+:20:CB-TX-${Math.floor(Math.random()*1000000).toString().padStart(6, '0')}
+:28D:00001/00001
+:50F:/${$("#senderAccount").value}
+${$("#senderName").value}
+${$("#senderAddress").value}
+:30:${$("#valueDate").value.replace(/-/g, '')}
+:21:INV2023001
+:32B:${$("#amountCcy").value}${parseFloat($("#amountVal").value).toFixed(2)}
+:59F:/${$("#beneficiaryAccount").value}
+${$("#beneficiaryName").value}
+${$("#beneficiaryAddress").value}
+:70:${$("#paymentDetails").value}
+:71A:SHA
+-}`;
+  }
+
+  function generateSEPA() {
+    return `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>CB-${Math.floor(Math.random()*1000000).toString().padStart(6, '0')}</MsgId>
+      <CreDtTm>${new Date().toISOString()}</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>${$("#amountVal").value}</CtrlSum>
+      <InitgPty>
+        <Nm>${$("#senderName").value}</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PMT-${Math.floor(Math.random()*1000000)}</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>false</BtchBookg>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>${$("#amountVal").value}</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>${$("#valueDate").value}</ReqdExctnDt>
+      <Dbtr>
+        <Nm>${$("#senderName").value}</Nm>
+        <PstlAdr>
+          <Ctry>US</Ctry>
+          <AdrLine>${$("#senderAddress").value}</AdrLine>
+        </PstlAdr>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>${$("#senderAccount").value}</IBAN>
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>${$("#senderBIC").value}</BIC>
+        </FinInstnId>
+      </DbtrAgt>
+      <ChrgBr>SLEV</ChrgBr>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>CB-${Math.floor(Math.random()*1000000)}</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="${$("#amountCcy").value}">${$("#amountVal").value}</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>${$("#beneficiaryBIC").value}</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>${$("#beneficiaryName").value}</Nm>
+          <PstlAdr>
+            <Ctry>DE</Ctry>
+            <AdrLine>${$("#beneficiaryAddress").value}</AdrLine>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>${$("#beneficiaryAccount").value}</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>${$("#paymentDetails").value}</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>`;
+  }
+
+  function generateFedwire() {
+    return `{2400}
+{3100}210124GLOBUS33XXX000123456
+{3200}010124100000000500000000000000EUROPDEFFXXX0123456789
+{3300}010124${$("#amountCcy").value}${parseFloat($("#amountVal").value).toFixed(2).padStart(12, '0')}${$("#senderAccount").value}${$("#senderName").value.substring(0, 35).padEnd(35)}
+{3400}${$("#beneficiaryAccount").value}${$("#beneficiaryName").value.substring(0, 35).padEnd(35)}${$("#beneficiaryBank").value.substring(0, 35)}
+{3600}${$("#paymentDetails").value.substring(0, 140)}
+{3700}CTX`;
+  }
+
+  function generateCHAPS() {
+    return `HDR
+SNDR ${$("#senderBIC").value}
+RCVR ${$("#beneficiaryBIC").value}
+DATE ${new Date().toISOString().split('T')[0].replace(/-/g, '')}
+TIME ${new Date().toLocaleTimeString('en-GB', {hour12: false}).replace(/:/g, '')}
+REF CB${Math.floor(Math.random()*1000000)}
+FROM ${$("#senderAccount").value}
+TO ${$("#beneficiaryAccount").value}
+AMT ${$("#amountCcy").value} ${$("#amountVal").value}
+NAME ${$("#beneficiaryName").value}
+ADDR ${$("#beneficiaryAddress").value}
+DETAILS ${$("#paymentDetails").value}
+FTR`;
+  }
+
+  function formatSwiftMessage(message) {
+    return message.split('\n').map(line => {
+      if (line.startsWith('{') || line.startsWith('-') || line.startsWith(':')) {
+        return line;
+      }
+      return `:${line}`;
+    }).join('\n');
+  }
+
+  // Copy message
+  $("#btnCopyMessage").onclick = () => copy($("#messageOutput").value || "");
+  
+  // Download message
+  $("#btnDownloadMessage").onclick = () => {
+    const filename = `${currentTransferType.toLowerCase()}_message.txt`;
+    downloadText(filename, $("#messageOutput").value || "");
+  };
+
+  // Process transfer
+  $("#btnProcessTransfer").onclick = () => {
+    stats.total++;
+    stats.pending++;
+    updateStats();
+    
+    log("Initiating transfer validation...");
+    
+    // Simulate processing steps
+    setTimeout(() => {
+      log("Validating sender credentials...");
+    }, 500);
+    
+    setTimeout(() => {
+      log("Checking compliance regulations...");
+    }, 1500);
+    
+    setTimeout(() => {
+      log("Verifying beneficiary details...");
+    }, 2500);
+    
+    setTimeout(() => {
+      log("Running AML screening...");
+    }, 3500);
+    
+    setTimeout(() => {
+      if (Math.random() > 0.1) { // 90% success rate
+        stats.pending--;
+        stats.success++;
+        log("Transfer approved. Settlement in progress...");
+        
+        setTimeout(() => {
+          log("Settlement completed successfully.");
+          log(`Funds transferred: ${$("#amountCcy").value} ${$("#amountVal").value}`);
+        }, 2000);
+      } else {
+        stats.pending--;
+        stats.failed++;
+        log("Transfer rejected. Compliance check failed.");
+      }
+      updateStats();
+    }, 4500);
+  };
+
+  // Simulate settlement
+  $("#btnSimulateSettlement").onclick = () => {
+    log("Simulating interbank settlement...");
+    
+    setTimeout(() => {
+      log("Debiting sender bank nostro account...");
+    }, 1000);
+    
+    setTimeout(() => {
+      log("Crediting beneficiary bank nostro account...");
+    }, 3000);
+    
+    setTimeout(() => {
+      log("Settlement complete. Accounts updated.");
+    }, 5000);
+  };
+
+  // Generate API code
+  $("#btnBuildAPI").onclick = () => {
+    let apiCode = "";
+    
+    switch(currentTransferType) {
+      case "MT103":
+        apiCode = `// Central Bank API Integration - MT103
+const axios = require('axios');
+
+const centralBankAPI = {
+  baseURL: 'https://api.centralbank.example/v1',
+  apiKey: 'your-api-key-here'
+};
+
+async function sendMT103(transferData) {
+  const payload = {
+    messageType: 'MT103',
+    sender: {
+      name: '${$("#senderName").value}',
+      bic: '${$("#senderBIC").value}',
+      account: '${$("#senderAccount").value}'
+    },
+    beneficiary: {
+      name: '${$("#beneficiaryName").value}',
+      bic: '${$("#beneficiaryBIC").value}',
+      account: '${$("#beneficiaryAccount").value}'
+    },
+    amount: {
+      value: ${$("#amountVal").value},
+      currency: '${$("#amountCcy").value}'
+    },
+    details: '${$("#paymentDetails").value}',
+    valueDate: '${$("#valueDate").value}'
+  };
+
+  try {
+    const response = await axios.post(
+      \`\${centralBankAPI.baseURL}/transfers\`,
+      payload,
+      {
+        headers: {
+          'Authorization': \`Bearer \${centralBankAPI.apiKey}\`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Transfer failed:', error.response.data);
+    throw error;
+  }
+}`;
+        break;
+        
+      case "SEPA":
+        apiCode = `// Central Bank API Integration - SEPA Credit Transfer
+const axios = require('axios');
+
+const centralBankAPI = {
+  baseURL: 'https://api.centralbank.example/v1',
+  apiKey: 'your-api-key-here'
+};
+
+async function sendSEPACredit(transferData) {
+  const payload = {
+    messageType: 'SEPA',
+    initiatingParty: {
+      name: '${$("#senderName").value}',
+      iban: '${$("#senderAccount").value}'
+    },
+    debtor: {
+      name: '${$("#senderName").value}',
+      address: '${$("#senderAddress").value}'
+    },
+    creditor: {
+      name: '${$("#beneficiaryName").value}',
+      iban: '${$("#beneficiaryAccount").value}',
+      address: '${$("#beneficiaryAddress").value}'
+    },
+    instructedAmount: {
+      value: ${$("#amountVal").value},
+      currency: '${$("#amountCcy").value}'
+    },
+    remittanceInformation: '${$("#paymentDetails").value}',
+    requestedExecutionDate: '${$("#valueDate").value}'
+  };
+
+  try {
+    const response = await axios.post(
+      \`\${centralBankAPI.baseURL}/sepa-transfers\`,
+      payload,
+      {
+        headers: {
+          'Authorization': \`Bearer \${centralBankAPI.apiKey}\`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('SEPA transfer failed:', error.response.data);
+    throw error;
+  }
+}`;
+        break;
+        
+      default:
+        apiCode = `// Central Bank API Integration - ${currentTransferType}
+// API integration code for ${currentTransferType} format
+// Contact Central Bank API team for specific implementation details`;
+    }
+    
+    $("#apiCode").value = apiCode;
+    log(`Generated API integration code for ${currentTransferType}`);
+  };
+
+  // Copy API code
+  $("#btnCopyAPI").onclick = () => copy($("#apiCode").value || "");
+
+  // Export bundle
+  $("#btnExportBundle").onclick = () => {
+    const files = [
+      {name: `${currentTransferType.toLowerCase()}_message.txt`, text: $("#messageOutput").value || ""},
+      {name: "api_integration.js", text: $("#apiCode").value || ""},
+      {name: "processing_log.txt", text: $("#processingLog").value || ""},
+      {name: "SESSION.meta.txt", text: `owner=${$("#owner").value}\nseal=${$("#seal").value}\ntransfer_type=${currentTransferType}\ncreated=${new Date().toISOString()}\n`}
+    ];
+    
+    let bundle = "----- CENTRAL BANK MACHINE SIMULATOR BUNDLE -----\n\n";
+    files.forEach(f => {
+      bundle += `\n=== FILE: ${f.name} ===\n` + f.text + "\n";
+    });
+    
+    downloadText("central_bank_bundle.txt", bundle);
+    log("Bundle exported successfully");
+  };
+
+  // Clear log
+  $("#btnClearLog").onclick = () => { 
+    $("#transactionLog").innerHTML = `<div class="log-entry">
+      <div><span class="log-type">System</span> <span class="log-details">Log cleared</span></div>
+      <div class="log-time">${new Date().toLocaleTimeString()}</div>
+    </div>`;
+    $("#processingLog").value = "";
+  };
+
+  // Initialize
+  updateStats();
+  log("Central Bank Machine Simulator initialized");
+</script>
+</body>
+</html>
